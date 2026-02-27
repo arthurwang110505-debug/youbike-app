@@ -181,11 +181,14 @@ const App = () => {
       })).sort((a, b) => (a.dist || 0) - (b.dist || 0));
     }
 
+    // act 欄位可能是數字 1 或字串 "1"，用 == 寬鬆比較
     let filtered;
     if (activeTab === 'full') {
-      filtered = list.filter(s => s.bemp <= 2 && s.act === "1").slice(0, 15);
+      // 需借車站：空位<=2（幾乎滿了，借出可領獎勵）
+      filtered = list.filter(s => s.available_return_bikes <= 2 && s.act == 1).slice(0, 15);
     } else {
-      filtered = list.filter(s => s.sbi <= 2 && s.act === "1").slice(0, 15);
+      // 需還車站：可借車<=2（幾乎空了，還入可領獎勵）
+      filtered = list.filter(s => s.available_rent_bikes <= 2 && s.act == 1).slice(0, 15);
     }
 
     if (filtered.length === 0 && list.length > 0) {
@@ -205,8 +208,8 @@ const App = () => {
 
     const stationContext = processedStations.map(s => ({
       name: s.sna.replace('YouBike2.0_', ''),
-      bikes: s.sbi,
-      slots: s.bemp,
+      bikes: s.available_rent_bikes,
+      slots: s.available_return_bikes,
       distance: s.dist ? `${s.dist.toFixed(2)}km` : '未知'
     }));
 
@@ -219,17 +222,20 @@ const App = () => {
     const callGemini = async (retryCount = 0) => {
       try {
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
-              systemInstruction: { parts: [{ text: "以繁體中文（台灣）回答。專業且精簡。使用列點。不要使用粗體字，也不能出現" }] }
+              systemInstruction: { parts: [{ text: "以繁體中文（台灣）回答。專業且精簡。使用列點。不要使用粗體字。" }] }
             })
           }
         );
-        if (!response.ok) throw new Error('API Error');
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`API Error ${response.status}: ${errText}`);
+        }
         const data = await response.json();
         return data.candidates?.[0]?.content?.parts?.[0]?.text;
       } catch (err) {
@@ -245,7 +251,8 @@ const App = () => {
       const result = await callGemini();
       setAiInsight(result);
     } catch (err) {
-      setAiInsight("AI 暫時無法連線，請確認 API Key 是否正確設定。");
+      console.error("Gemini 錯誤:", err);
+      setAiInsight(`AI 連線失敗：${err.message}\n\n請確認 Vercel 環境變數 VITE_GEMINI_API_KEY 是否正確設定。`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -482,8 +489,8 @@ const App = () => {
       {/* 底部懸浮條 */}
       <AnimatePresence>
         {!loading && (
-          <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xs z-50 px-4">
-            <div onClick={() => setShowRulesModal(true)} className="bg-indigo-600 shadow-2xl shadow-indigo-500/40 rounded-full py-3 px-6 flex items-center justify-between cursor-pointer active:scale-95 transition-transform">
+          <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="fixed bottom-6 left-0 right-0 z-50 px-6 flex justify-center">
+            <div onClick={() => setShowRulesModal(true)} className="w-full max-w-xs bg-indigo-600 shadow-2xl shadow-indigo-500/40 rounded-full py-3 px-6 flex items-center justify-between cursor-pointer active:scale-95 transition-transform">
               <div className="flex items-center space-x-3 text-white">
                 <div className="bg-white/20 p-1.5 rounded-full"><ArrowRightLeft size={16} /></div>
                 <span className="text-sm font-bold tracking-wide">任務成功即領 $5 元</span>
@@ -552,11 +559,11 @@ const StationCard = forwardRef(({ station, idx, type }, ref) => {
         <div className="grid grid-cols-2 gap-4 my-2">
           <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-3 flex flex-col items-center">
             <span className="text-[10px] text-slate-500 font-bold mb-1">可借車輛</span>
-            <span className={`text-2xl font-black ${station.sbi <= 2 ? 'text-rose-500' : 'text-white'}`}>{station.sbi}</span>
+            <span className={`text-2xl font-black ${station.available_rent_bikes <= 2 ? 'text-rose-500' : 'text-white'}`}>{station.available_rent_bikes}</span>
           </div>
           <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-3 flex flex-col items-center">
             <span className="text-[10px] text-slate-500 font-bold mb-1">可還空位</span>
-            <span className={`text-2xl font-black ${station.bemp <= 2 ? 'text-orange-500' : 'text-white'}`}>{station.bemp}</span>
+            <span className={`text-2xl font-black ${station.available_return_bikes <= 2 ? 'text-orange-500' : 'text-white'}`}>{station.available_return_bikes}</span>
           </div>
         </div>
 
