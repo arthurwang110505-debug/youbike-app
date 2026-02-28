@@ -191,11 +191,11 @@ const App = () => {
     // act 欄位可能是數字 1 或字串 "1"，用 == 寬鬆比較
     let filtered;
     if (activeTab === 'full') {
-      // 需借車站：空位<=2（幾乎滿了，借出可領獎勵）
-      filtered = list.filter(s => s.available_return_bikes <= 2 && s.act == 1).slice(0, 15);
+      // 需借車站：完全沒有空位（滿站），借出可領獎勵
+      filtered = list.filter(s => s.available_return_bikes === 0 && s.act == 1).slice(0, 15);
     } else {
-      // 需還車站：可借車<=2（幾乎空了，還入可領獎勵）
-      filtered = list.filter(s => s.available_rent_bikes <= 2 && s.act == 1).slice(0, 15);
+      // 需還車站：完全沒有車可借（空站），還入可領獎勵
+      filtered = list.filter(s => s.available_rent_bikes === 0 && s.act == 1).slice(0, 15);
     }
 
     if (filtered.length === 0 && list.length > 0) {
