@@ -172,11 +172,36 @@ const App = () => {
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
-  const [locationStatus, setLocationStatus] = useState('idle'); // 'idle' | 'asking' | 'loading' | 'success' | 'error' | 'denied'
+  const [locationStatus, setLocationStatus] = useState('idle');
   const [locationError, setLocationError] = useState('');
   const [activeTab, setActiveTab] = useState('full');
   const [lastUpdated, setLastUpdated] = useState('');
-  const [radius, setRadius] = useState(1); // 公里，預設 1km
+  const [radius, setRadius] = useState(1);
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('themeMode') || 'system');
+
+  // 解析實際主題（system 時跟隨系統）
+  const [systemIsDark, setSystemIsDark] = useState(getSystemTheme() === 'dark');
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e) => setSystemIsDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  const isDark = themeMode === 'system' ? systemIsDark : themeMode === 'dark';
+  const t = isDark ? themes.dark : themes.light;
+
+  // 切換主題並存到 localStorage
+  const cycleTheme = () => {
+    const next = themeMode === 'system' ? 'dark' : themeMode === 'dark' ? 'light' : 'system';
+    setThemeMode(next);
+    localStorage.setItem('themeMode', next);
+  };
+
+  const ThemeIcon = () => {
+    if (themeMode === 'dark') return <Moon size={18} />;
+    if (themeMode === 'light') return <Sun size={18} />;
+    return <Monitor size={18} />;
+  };
   
   // Modal 狀態
   const [aiInsight, setAiInsight] = useState(null);
@@ -352,11 +377,11 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30 overflow-x-hidden">
+    <div className={`min-h-screen ${t.bg} ${t.text} font-sans selection:bg-indigo-500/30 overflow-x-hidden transition-colors duration-300`}>
       {/* 背景裝飾 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-indigo-600/20 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute top-[20%] -right-[10%] w-[30%] h-[50%] bg-purple-600/10 blur-[120px] rounded-full" />
+        <div className={`absolute -top-[10%] -left-[10%] w-[40%] h-[40%] ${t.glow1} blur-[120px] rounded-full animate-pulse`} />
+        <div className={`absolute top-[20%] -right-[10%] w-[30%] h-[50%] ${t.glow2} blur-[120px] rounded-full`} />
       </div>
 
       <div className="relative z-10 max-w-lg mx-auto px-5 pt-8 pb-24">
@@ -371,18 +396,27 @@ const App = () => {
                 <Zap size={24} className="text-white fill-current" />
               </div>
               <div>
-                <h1 className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                <h1 className={`text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r ${isDark ? 'from-white to-slate-400' : 'from-slate-900 to-slate-500'}`}>
                   友愛接力助手
                 </h1>
-                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">YouBike 2.0 Bonus Tracker</p>
+                <p className={`text-[10px] ${t.textSub} font-medium uppercase tracking-widest`}>YouBike 2.0 Bonus Tracker</p>
               </div>
             </motion.div>
 
             <div className="flex space-x-2">
+              {/* 主題切換 */}
+              <motion.button
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                onClick={cycleTheme}
+                className={`p-3 ${t.bgBtn} backdrop-blur-md border ${t.borderBtn} rounded-2xl ${t.textBtn} hover:${t.text} transition-colors`}
+                title={themeMode === 'system' ? '系統' : themeMode === 'dark' ? '深色' : '淺色'}
+              >
+                <ThemeIcon />
+              </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                 onClick={() => setShowRulesModal(true)}
-                className="p-3 bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl text-slate-300 hover:text-white transition-colors"
+                className={`p-3 ${t.bgBtn} backdrop-blur-md border ${t.borderBtn} rounded-2xl ${t.textBtn} hover:${t.text} transition-colors`}
               >
                 <Info size={20} />
               </motion.button>
@@ -399,7 +433,7 @@ const App = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                 onClick={handleRefresh}
-                className="p-3 bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl text-slate-300 hover:text-white transition-colors"
+                className={`p-3 ${t.bgBtn} backdrop-blur-md border ${t.borderBtn} rounded-2xl ${t.textBtn} hover:${t.text} transition-colors`}
               >
                 <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
               </motion.button>
@@ -408,7 +442,7 @@ const App = () => {
 
           {/* 狀態列：更新時間 + 位置狀態 */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-between pl-1">
-            <div className="flex items-center space-x-2 text-[11px] text-slate-500">
+            <div className={`flex items-center space-x-2 text-[11px] ${t.textSub}`}>
               <div className={`w-1.5 h-1.5 rounded-full ${loading ? 'bg-amber-500' : 'bg-emerald-500'} animate-pulse`} />
               <span>最後更新: {lastUpdated || '載入中...'} | 北北桃試辦中</span>
             </div>
@@ -423,7 +457,7 @@ const App = () => {
                 }
               }}
               disabled={locationStatus === 'loading'}
-              className="flex items-center space-x-1 text-[11px] text-slate-500 hover:text-slate-300 transition-colors disabled:cursor-not-allowed"
+              className={`flex items-center space-x-1 text-[11px] ${t.textSub} hover:${t.textMuted} transition-colors disabled:cursor-not-allowed`}
             >
               <LocationIcon />
               <span>
@@ -457,7 +491,7 @@ const App = () => {
         </header>
 
         {/* 標籤切換器 */}
-        <div className="relative flex p-1.5 bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl mb-4">
+        <div className={`relative flex p-1.5 ${t.bgTab} backdrop-blur-xl border ${t.border} rounded-2xl mb-4`}>
           <div 
             className="absolute top-1.5 bottom-1.5 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] bg-gradient-to-r rounded-xl shadow-lg"
             style={{
@@ -470,15 +504,15 @@ const App = () => {
                 : 'linear-gradient(to right, #6366f1, #4f46e5)'
             }}
           />
-          <button onClick={() => setActiveTab('full')} className={`relative z-10 flex-1 py-3 px-2 flex flex-col items-center transition-colors duration-300 ${activeTab === 'full' ? 'text-white' : 'text-slate-400'}`}>
+          <button onClick={() => setActiveTab('full')} className={`relative z-10 flex-1 py-3 px-2 flex flex-col items-center transition-colors duration-300 ${activeTab === 'full' ? 'text-white' : t.textSub}`}>
             <span className="text-xs font-bold">需借車站</span>
             <span className="text-[11px] opacity-70">滿站借出 $5</span>
           </button>
-          <button onClick={() => setActiveTab('empty')} className={`relative z-10 flex-1 py-3 px-2 flex flex-col items-center transition-colors duration-300 ${activeTab === 'empty' ? 'text-white' : 'text-slate-400'}`}>
+          <button onClick={() => setActiveTab('empty')} className={`relative z-10 flex-1 py-3 px-2 flex flex-col items-center transition-colors duration-300 ${activeTab === 'empty' ? 'text-white' : t.textSub}`}>
             <span className="text-xs font-bold">需還車站</span>
             <span className="text-[11px] opacity-70">空站還入 $5</span>
           </button>
-          <button onClick={() => setActiveTab('nearby')} className={`relative z-10 flex-1 py-3 px-2 flex flex-col items-center transition-colors duration-300 ${activeTab === 'nearby' ? 'text-white' : 'text-slate-400'}`}>
+          <button onClick={() => setActiveTab('nearby')} className={`relative z-10 flex-1 py-3 px-2 flex flex-col items-center transition-colors duration-300 ${activeTab === 'nearby' ? 'text-white' : t.textSub}`}>
             <span className="text-xs font-bold">附近站點</span>
             <span className="text-[11px] opacity-70">查看附近</span>
           </button>
@@ -493,16 +527,14 @@ const App = () => {
               exit={{ opacity: 0, height: 0 }}
               className="flex items-center space-x-2 mb-4"
             >
-              <span className="text-[11px] text-slate-500 whitespace-nowrap">篩選範圍</span>
-              <div className="flex flex-1 bg-slate-900/60 border border-slate-800 rounded-xl p-1 space-x-1">
+              <span className={`text-[11px] ${t.textSub} whitespace-nowrap`}>篩選範圍</span>
+              <div className={`flex flex-1 ${t.bgRadius} border ${t.border} rounded-xl p-1 space-x-1`}>
                 {[1, 1.5, 2].map(r => (
                   <button
                     key={r}
                     onClick={() => setRadius(r)}
                     className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all duration-200 ${
-                      radius === r
-                        ? 'bg-slate-600 text-white shadow'
-                        : 'text-slate-500 hover:text-slate-300'
+                      radius === r ? `${t.bgRadiusActive} ${t.text} shadow` : t.textSub
                     }`}
                   >
                     {r} km
@@ -514,7 +546,7 @@ const App = () => {
         </AnimatePresence>
         <AnimatePresence>
           {isFallbackMode && !loading && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-4 px-4 py-2 bg-slate-900/40 border border-slate-800 rounded-xl flex items-center space-x-2 text-slate-400">
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className={`mb-4 px-4 py-2 ${t.bgCard} border ${t.border} rounded-xl flex items-center space-x-2 ${t.textMuted}`}>
               <Compass size={14} className="text-indigo-400" />
               <span className="text-[12px] font-medium">目前無符合條件站點，顯示附近推薦站點</span>
             </motion.div>
@@ -525,13 +557,13 @@ const App = () => {
         <div className="space-y-4">
           <AnimatePresence mode="popLayout">
             {loading ? (
-              [1, 2, 3].map(i => <SkeletonCard key={i} />)
+              [1, 2, 3].map(i => <SkeletonCard key={i} t={t} />)
             ) : processedStations.length > 0 ? (
               processedStations.map((s, idx) => (
-                <StationCard key={s.sno} station={s} idx={idx} type={isFallbackMode ? 'normal' : activeTab === 'nearby' ? 'normal' : activeTab} />
+                <StationCard key={s.sno} station={s} idx={idx} type={isFallbackMode ? 'normal' : activeTab === 'nearby' ? 'normal' : activeTab} t={t} />
               ))
             ) : (
-              <div className="py-20 text-center text-slate-500">
+              <div className={`py-20 text-center ${t.textSub}`}>
                 <Info size={32} className="mx-auto mb-4 opacity-20" />
                 <p>無可用站點資料</p>
               </div>
@@ -541,7 +573,7 @@ const App = () => {
       </div>
 
       {/* 定位詢問 Modal */}
-      <Modal show={locationStatus === 'asking'} onClose={handleDenyLocation} title="開啟位置功能" icon={<LocateFixed />}>
+      <Modal show={locationStatus === 'asking'} onClose={handleDenyLocation} title="開啟位置功能" icon={<LocateFixed />} t={t}>
         <div className="text-slate-300 text-sm space-y-4">
           <div className="flex justify-center py-4">
             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-full p-6">
@@ -549,9 +581,9 @@ const App = () => {
             </div>
           </div>
           <p className="text-center text-slate-300 leading-relaxed">
-            開啟定位後，站點會依照<span className="text-white font-bold">距離由近到遠</span>排列，更快找到附近的獎勵站點。
+            開啟定位後，站點會依照<span className={`${t.text} font-bold`}>距離由近到遠</span>排列，更快找到附近的獎勵站點。
           </p>
-          <p className="text-center text-[12px] text-slate-500">
+          <p className={`text-center text-[12px] ${t.textSub}`}>
             位置資訊僅在您的裝置上計算，不會上傳至伺服器。
           </p>
         </div>
@@ -565,7 +597,7 @@ const App = () => {
           </button>
           <button
             onClick={handleDenyLocation}
-            className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-400 font-medium rounded-2xl transition-colors"
+            className={`w-full py-3 ${t.bgBtnSolid} ${t.bgBtnHover} ${t.textMuted} font-medium rounded-2xl transition-colors`}
           >
             暫時不要
           </button>
@@ -573,12 +605,12 @@ const App = () => {
       </Modal>
 
       {/* AI Modal */}
-      <Modal show={showAiModal} onClose={() => setShowAiModal(false)} title="✨ AI 策略簡報" icon={<Bot />}>
-        <div className="min-h-[120px] text-slate-300 text-sm leading-relaxed">
+      <Modal show={showAiModal} onClose={() => setShowAiModal(false)} title="✨ AI 策略簡報" icon={<Bot />} t={t}>
+        <div className={`min-h-[120px] ${t.textMuted} text-sm leading-relaxed`}>
           {isAnalyzing ? (
             <div className="flex flex-col items-center py-8 space-y-4">
               <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-slate-500 animate-pulse">專家分析中...</p>
+              <p className={`${t.textSub} animate-pulse`}>專家分析中...</p>
             </div>
           ) : (
             <div className="whitespace-pre-line">{aiInsight}</div>
@@ -592,8 +624,8 @@ const App = () => {
       </Modal>
 
       {/* Rules Modal */}
-      <Modal show={showRulesModal} onClose={() => setShowRulesModal(false)} title="友愛接力活動辦法" icon={<ShieldCheck />}>
-        <div className="max-h-[65vh] overflow-y-auto pr-2 text-slate-300 text-sm space-y-5 custom-scrollbar">
+      <Modal show={showRulesModal} onClose={() => setShowRulesModal(false)} title="友愛接力活動辦法" icon={<ShieldCheck />} t={t}>
+        <div className={`max-h-[65vh] overflow-y-auto pr-2 ${t.textMuted} text-sm space-y-5 custom-scrollbar`}>
           <section>
             <h4 className="flex items-center text-indigo-400 text-base font-bold mb-2">
               <Calendar size={18} className="mr-2"/> 活動資訊
@@ -627,7 +659,7 @@ const App = () => {
             </ul>
           </section>
           
-          <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50 text-[12px] leading-relaxed text-slate-400">
+          <div className={`p-4 ${t.bgBtnSolid} rounded-2xl border ${t.border} text-[12px] leading-relaxed ${t.textMuted}`}>
              系統每日 23:59 結算，隔日 07:00 前發送。請至 App「騎乘券管理」查詢。
           </div>
 
@@ -635,7 +667,7 @@ const App = () => {
             href="https://activity.youbike.com.tw/activity-info/692fb3a84e0237a53005f166" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="flex items-center justify-center space-x-2 w-full py-4 bg-slate-800 hover:bg-slate-700 text-indigo-400 font-bold rounded-2xl transition-all border border-indigo-500/20"
+            className={`flex items-center justify-center space-x-2 w-full py-4 ${t.bgBtnSolid} ${t.bgBtnHover} text-indigo-400 font-bold rounded-2xl transition-all border border-indigo-500/20`}
           >
             <span>查看官方完整活動細節</span>
             <ExternalLink size={16} />
@@ -663,28 +695,35 @@ const App = () => {
 
 // --- 子組件 ---
 
-const Modal = ({ show, onClose, title, icon, children }) => (
-  <AnimatePresence>
-    {show && (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-        <motion.div initial={{ y: 100, scale: 0.95 }} animate={{ y: 0, scale: 1 }} exit={{ y: 100, scale: 0.95 }} className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center space-x-2 text-indigo-400">
-                {icon}
-                <h2 className="text-lg font-bold">{title}</h2>
+const Modal = ({ show, onClose, title, icon, children, t }) => {
+  const bg = t?.bgModal || 'bg-slate-900';
+  const border = t?.border || 'border-slate-800';
+  const overlay = t?.modalOverlay || 'bg-slate-950/80';
+  const textSub = t?.textSub || 'text-slate-500';
+  const text = t?.text || 'text-slate-100';
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 ${overlay} backdrop-blur-sm`}>
+          <motion.div initial={{ y: 100, scale: 0.95 }} animate={{ y: 0, scale: 1 }} exit={{ y: 100, scale: 0.95 }} className={`w-full max-w-md ${bg} border ${border} rounded-3xl overflow-hidden shadow-2xl`}>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center space-x-2 text-indigo-400">
+                  {icon}
+                  <h2 className={`text-lg font-bold ${text}`}>{title}</h2>
+                </div>
+                <button onClick={onClose} className={`${textSub} hover:${text} p-1 transition-colors`}><X size={20} /></button>
               </div>
-              <button onClick={onClose} className="text-slate-500 hover:text-white p-1"><X size={20} /></button>
+              {children}
             </div>
-            {children}
-          </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
-    )}
-  </AnimatePresence>
-);
+      )}
+    </AnimatePresence>
+  );
+};
 
-const StationCard = forwardRef(({ station, idx, type }, ref) => {
+const StationCard = forwardRef(({ station, idx, type, t = themes.dark }, ref) => {
   const isFull = type === 'full';
   const isEmpty = type === 'empty';
   
@@ -697,13 +736,13 @@ const StationCard = forwardRef(({ station, idx, type }, ref) => {
       transition={{ duration: 0.4, delay: idx * 0.05 }}
       className="group relative"
     >
-      <div className="relative bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl overflow-hidden">
+      <div className={`relative ${t.bgCard} backdrop-blur-xl border ${t.borderCard} p-5 rounded-3xl overflow-hidden`}>
         <div className={`absolute left-0 top-0 bottom-0 w-1 ${isFull ? 'bg-orange-500' : isEmpty ? 'bg-emerald-500' : 'bg-indigo-500/30'}`} />
 
         <div className="flex justify-between items-start mb-4">
           <div className="space-y-1 pr-2">
-            <h3 className="text-lg font-bold text-white leading-tight">{station.sna.replace('YouBike2.0_', '')}</h3>
-            <div className="flex items-center text-slate-500 text-xs mt-1">
+            <h3 className={`text-lg font-bold ${t.text} leading-tight`}>{station.sna.replace('YouBike2.0_', '')}</h3>
+            <div className={`flex items-center ${t.textSub} text-xs mt-1`}>
               <MapPin size={12} className="mr-1" />
               <span className="truncate max-w-[180px]">{station.ar}</span>
             </div>
@@ -714,26 +753,26 @@ const StationCard = forwardRef(({ station, idx, type }, ref) => {
         </div>
 
         <div className="grid grid-cols-2 gap-4 my-2">
-          <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-3 flex flex-col items-center">
-            <span className="text-[10px] text-slate-500 font-bold mb-1">可借車輛</span>
-            <span className={`text-2xl font-black ${station.available_rent_bikes <= 2 ? 'text-rose-500' : 'text-white'}`}>{station.available_rent_bikes}</span>
+          <div className={`${t.bgInner} border ${t.borderInner} rounded-2xl p-3 flex flex-col items-center`}>
+            <span className={`text-[10px] ${t.textSub} font-bold mb-1`}>可借車輛</span>
+            <span className={`text-2xl font-black ${station.available_rent_bikes <= 2 ? 'text-rose-500' : t.text}`}>{station.available_rent_bikes}</span>
           </div>
-          <div className="bg-slate-950/40 border border-white/5 rounded-2xl p-3 flex flex-col items-center">
-            <span className="text-[10px] text-slate-500 font-bold mb-1">可還空位</span>
-            <span className={`text-2xl font-black ${station.available_return_bikes <= 2 ? 'text-orange-500' : 'text-white'}`}>{station.available_return_bikes}</span>
+          <div className={`${t.bgInner} border ${t.borderInner} rounded-2xl p-3 flex flex-col items-center`}>
+            <span className={`text-[10px] ${t.textSub} font-bold mb-1`}>可還空位</span>
+            <span className={`text-2xl font-black ${station.available_return_bikes <= 2 ? 'text-orange-500' : t.text}`}>{station.available_return_bikes}</span>
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-slate-800/60 flex items-center justify-between">
+        <div className={`mt-4 pt-4 border-t ${t.divider} flex items-center justify-between`}>
           <div className="flex items-center space-x-2">
-            {isFull ? <AlertCircle size={15} className="text-orange-500" /> : isEmpty ? <CheckCircle2 size={15} className="text-emerald-500" /> : <Compass size={15} className="text-slate-500" />}
-            <span className={`text-[11px] font-bold ${isFull ? 'text-orange-400' : isEmpty ? 'text-emerald-400' : 'text-slate-500'}`}>
+            {isFull ? <AlertCircle size={15} className="text-orange-500" /> : isEmpty ? <CheckCircle2 size={15} className="text-emerald-500" /> : <Compass size={15} className={t.textSub} />}
+            <span className={`text-[11px] font-bold ${isFull ? 'text-orange-400' : isEmpty ? 'text-emerald-400' : t.textSub}`}>
               {isFull ? '獎勵：滿站借出 $5' : isEmpty ? '獎勵：空站還入 $5' : '一般站點'}
             </span>
           </div>
           <button 
             onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}`, '_blank')}
-            className="text-xs font-black text-white bg-slate-800 px-4 py-2 rounded-xl hover:bg-slate-700 transition-all flex items-center"
+            className={`text-xs font-black ${t.text} ${t.bgBtnSolid} px-4 py-2 rounded-xl ${t.bgBtnHover} transition-all flex items-center`}
           >
             導航 <Navigation size={12} className="ml-2" />
           </button>
@@ -743,13 +782,13 @@ const StationCard = forwardRef(({ station, idx, type }, ref) => {
   );
 });
 
-const SkeletonCard = forwardRef((props, ref) => (
-  <div ref={ref} className="bg-slate-900/40 border border-slate-800 p-5 rounded-3xl animate-pulse">
+const SkeletonCard = forwardRef(({ t = themes.dark }, ref) => (
+  <div ref={ref} className={`${t.skeletonBase} border ${t.border} p-5 rounded-3xl animate-pulse`}>
     <div className="flex justify-between mb-6">
-      <div className="space-y-2"><div className="h-4 w-32 bg-slate-800 rounded"/><div className="h-3 w-48 bg-slate-800 rounded"/></div>
-      <div className="h-6 w-12 bg-slate-800 rounded"/>
+      <div className="space-y-2"><div className={`h-4 w-32 ${t.skeletonItem} rounded`}/><div className={`h-3 w-48 ${t.skeletonItem} rounded`}/></div>
+      <div className={`h-6 w-12 ${t.skeletonItem} rounded`}/>
     </div>
-    <div className="grid grid-cols-2 gap-4"><div className="h-14 bg-slate-800/50 rounded-2xl"/><div className="h-14 bg-slate-800/50 rounded-2xl"/></div>
+    <div className="grid grid-cols-2 gap-4"><div className={`h-14 ${t.skeletonInner} rounded-2xl`}/><div className={`h-14 ${t.skeletonInner} rounded-2xl`}/></div>
   </div>
 ));
 
