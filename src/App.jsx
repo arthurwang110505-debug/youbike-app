@@ -189,18 +189,27 @@ const App = () => {
     }
 
     // act 欄位可能是數字 1 或字串 "1"，用 == 寬鬆比較
+    // 有定位時只顯示方圓 1 公里內的站點
+    const nearby = userLocation
+      ? list.filter(s => s.dist <= 1 && s.act == 1)
+      : list.filter(s => s.act == 1);
+
     let filtered;
-    if (activeTab === 'full') {
+    if (activeTab === 'nearby') {
+      // 附近站點：方圓 1 公里內所有啟用中的站點
+      setIsFallbackMode(false);
+      return nearby.slice(0, 15);
+    } else if (activeTab === 'full') {
       // 需借車站：完全沒有空位（滿站），借出可領獎勵
-      filtered = list.filter(s => s.available_return_bikes === 0 && s.act == 1).slice(0, 15);
+      filtered = nearby.filter(s => s.available_return_bikes === 0).slice(0, 15);
     } else {
       // 需還車站：完全沒有車可借（空站），還入可領獎勵
-      filtered = list.filter(s => s.available_rent_bikes === 0 && s.act == 1).slice(0, 15);
+      filtered = nearby.filter(s => s.available_rent_bikes === 0).slice(0, 15);
     }
 
-    if (filtered.length === 0 && list.length > 0) {
+    if (filtered.length === 0 && nearby.length > 0) {
       setIsFallbackMode(true);
-      return list.slice(0, 15);
+      return nearby.slice(0, 15);
     } else {
       setIsFallbackMode(false);
       return filtered;
@@ -384,20 +393,26 @@ const App = () => {
           <div 
             className="absolute top-1.5 bottom-1.5 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] bg-gradient-to-r rounded-xl shadow-lg"
             style={{
-              left: activeTab === 'full' ? '6px' : 'calc(50% + 3px)',
-              right: activeTab === 'full' ? 'calc(50% + 3px)' : '6px',
-              backgroundImage: activeTab === 'full' 
-                ? 'linear-gradient(to right, #f97316, #ea580c)' 
-                : 'linear-gradient(to right, #10b981, #059669)'
+              left: activeTab === 'full' ? '6px' : activeTab === 'empty' ? 'calc(33.333% + 3px)' : 'calc(66.666% + 3px)',
+              right: activeTab === 'full' ? 'calc(66.666% + 3px)' : activeTab === 'empty' ? 'calc(33.333% + 3px)' : '6px',
+              backgroundImage: activeTab === 'full'
+                ? 'linear-gradient(to right, #f97316, #ea580c)'
+                : activeTab === 'empty'
+                ? 'linear-gradient(to right, #10b981, #059669)'
+                : 'linear-gradient(to right, #6366f1, #4f46e5)'
             }}
           />
-          <button onClick={() => setActiveTab('full')} className={`relative z-10 flex-1 py-3 px-5 flex flex-col items-center transition-colors duration-300 ${activeTab === 'full' ? 'text-white' : 'text-slate-400'}`}>
-            <span className="text-sm font-bold">需借車站</span>
-            <span className="text-[12.5px] opacity-70">滿站借出領 $5</span>
+          <button onClick={() => setActiveTab('full')} className={`relative z-10 flex-1 py-3 px-2 flex flex-col items-center transition-colors duration-300 ${activeTab === 'full' ? 'text-white' : 'text-slate-400'}`}>
+            <span className="text-xs font-bold">需借車站</span>
+            <span className="text-[11px] opacity-70">滿站借出 $5</span>
           </button>
-          <button onClick={() => setActiveTab('empty')} className={`relative z-10 flex-1 py-3 px-5 flex flex-col items-center transition-colors duration-300 ${activeTab === 'empty' ? 'text-white' : 'text-slate-400'}`}>
-            <span className="text-sm font-bold">需還車站</span>
-            <span className="text-[12.5px] opacity-70">空站還入領 $5</span>
+          <button onClick={() => setActiveTab('empty')} className={`relative z-10 flex-1 py-3 px-2 flex flex-col items-center transition-colors duration-300 ${activeTab === 'empty' ? 'text-white' : 'text-slate-400'}`}>
+            <span className="text-xs font-bold">需還車站</span>
+            <span className="text-[11px] opacity-70">空站還入 $5</span>
+          </button>
+          <button onClick={() => setActiveTab('nearby')} className={`relative z-10 flex-1 py-3 px-2 flex flex-col items-center transition-colors duration-300 ${activeTab === 'nearby' ? 'text-white' : 'text-slate-400'}`}>
+            <span className="text-xs font-bold">附近站點</span>
+            <span className="text-[11px] opacity-70">查看附近</span>
           </button>
         </div>
 
@@ -418,7 +433,7 @@ const App = () => {
               [1, 2, 3].map(i => <SkeletonCard key={i} />)
             ) : processedStations.length > 0 ? (
               processedStations.map((s, idx) => (
-                <StationCard key={s.sno} station={s} idx={idx} type={isFallbackMode ? 'normal' : activeTab} />
+                <StationCard key={s.sno} station={s} idx={idx} type={isFallbackMode ? 'normal' : activeTab === 'nearby' ? 'normal' : activeTab} />
               ))
             ) : (
               <div className="py-20 text-center text-slate-500">
