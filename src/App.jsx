@@ -396,10 +396,10 @@ const App = () => {
                 <Zap size={24} className="text-white fill-current" />
               </div>
               <div>
-                <h1 className={`text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r ${isDark ? 'from-white to-slate-400' : 'from-slate-900 to-slate-500'}`}>
+                <h1 className={`text-lg font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r ${isDark ? 'from-white to-slate-400' : 'from-slate-900 to-slate-500'}`}>
                   友愛接力助手
                 </h1>
-                <p className={`text-[10px] ${t.textSub} font-medium uppercase tracking-widest`}>YouBike 2.0 Bonus Tracker</p>
+                <p className={`text-[9px] ${t.textSub} font-medium uppercase tracking-widest`}>YouBike 2.0 Bonus Tracker</p>
               </div>
             </motion.div>
 
