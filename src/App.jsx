@@ -105,7 +105,7 @@ const App = () => {
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
-  const [locationStatus, setLocationStatus] = useState('idle'); // 'idle' | 'loading' | 'success' | 'error'
+  const [locationStatus, setLocationStatus] = useState('idle'); // 'idle' | 'asking' | 'loading' | 'success' | 'error' | 'denied'
   const [locationError, setLocationError] = useState('');
   const [activeTab, setActiveTab] = useState('full');
   const [lastUpdated, setLastUpdated] = useState('');
@@ -116,15 +116,15 @@ const App = () => {
   const [showAiModal, setShowAiModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
 
-  // 1. 初始化：先抓資料，同步取得位置
+  // 1. 初始化：只抓資料，不自動要位置
   useEffect(() => {
     handleRefresh();
-    requestLocation();
+    // 詢問使用者是否願意開啟定位
+    setLocationStatus('asking');
   }, []);
 
   /**
-   * 請求地理位置
-   * 獨立成函式，讓使用者可以手動重試
+   * 使用者點「允許」後才呼叫
    */
   const requestLocation = async () => {
     setLocationStatus('loading');
@@ -138,6 +138,13 @@ const App = () => {
       setLocationError(err.message);
       setLocationStatus('error');
     }
+  };
+
+  /**
+   * 使用者選擇不開啟定位
+   */
+  const handleDenyLocation = () => {
+    setLocationStatus('denied');
   };
 
   const handleRefresh = async () => {
@@ -263,7 +270,8 @@ const App = () => {
     if (locationStatus === 'loading') return <LocateFixed size={12} className="animate-pulse text-amber-400" />;
     if (locationStatus === 'success') return <LocateFixed size={12} className="text-emerald-400" />;
     if (locationStatus === 'error') return <LocateOff size={12} className="text-rose-400" />;
-    return <MapPin size={12} className="text-slate-500" />;
+    if (locationStatus === 'denied') return <LocateOff size={12} className="text-slate-600" />;
+    return <MapPin size={12} className="text-indigo-400 animate-pulse" />;
   };
 
   return (
@@ -328,18 +336,25 @@ const App = () => {
               <span>最後更新: {lastUpdated || '載入中...'} | 北北桃試辦中</span>
             </div>
 
-            {/* 位置狀態按鈕（點擊可重試） */}
+            {/* 位置狀態按鈕（點擊可重試或開啟詢問） */}
             <button
-              onClick={requestLocation}
+              onClick={() => {
+                if (locationStatus === 'asking' || locationStatus === 'denied') {
+                  setLocationStatus('asking');
+                } else if (locationStatus !== 'loading') {
+                  requestLocation();
+                }
+              }}
               disabled={locationStatus === 'loading'}
               className="flex items-center space-x-1 text-[11px] text-slate-500 hover:text-slate-300 transition-colors disabled:cursor-not-allowed"
-              title={locationError || (locationStatus === 'success' ? '位置已取得' : '點擊取得位置')}
             >
               <LocationIcon />
               <span>
+                {locationStatus === 'asking' && <span className="text-indigo-400">開啟定位？</span>}
                 {locationStatus === 'loading' && '定位中...'}
                 {locationStatus === 'success' && '位置已取得'}
                 {locationStatus === 'error' && '點擊重試定位'}
+                {locationStatus === 'denied' && '點擊開啟定位'}
                 {locationStatus === 'idle' && '取得位置中'}
               </span>
             </button>
@@ -414,6 +429,38 @@ const App = () => {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* 定位詢問 Modal */}
+      <Modal show={locationStatus === 'asking'} onClose={handleDenyLocation} title="開啟位置功能" icon={<LocateFixed />}>
+        <div className="text-slate-300 text-sm space-y-4">
+          <div className="flex justify-center py-4">
+            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-full p-6">
+              <LocateFixed size={40} className="text-indigo-400" />
+            </div>
+          </div>
+          <p className="text-center text-slate-300 leading-relaxed">
+            開啟定位後，站點會依照<span className="text-white font-bold">距離由近到遠</span>排列，更快找到附近的獎勵站點。
+          </p>
+          <p className="text-center text-[12px] text-slate-500">
+            位置資訊僅在您的裝置上計算，不會上傳至伺服器。
+          </p>
+        </div>
+        <div className="flex flex-col space-y-2 mt-6">
+          <button
+            onClick={requestLocation}
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl transition-colors flex items-center justify-center space-x-2"
+          >
+            <LocateFixed size={16} />
+            <span>允許取得位置</span>
+          </button>
+          <button
+            onClick={handleDenyLocation}
+            className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-400 font-medium rounded-2xl transition-colors"
+          >
+            暫時不要
+          </button>
+        </div>
+      </Modal>
 
       {/* AI Modal */}
       <Modal show={showAiModal} onClose={() => setShowAiModal(false)} title="✨ AI 策略簡報" icon={<Bot />}>
