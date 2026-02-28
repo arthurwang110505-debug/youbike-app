@@ -19,7 +19,10 @@ import {
   ShieldCheck,
   ExternalLink,
   LocateFixed,
-  LocateOff
+  LocateOff,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react';
 
 // --- API 常數 ---
@@ -29,6 +32,70 @@ const API_URL = "/api/youbike";
 
 // ⚠️ 將這裡換成你的 Gemini API Key
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+
+// --- 主題色設定 ---
+// mode: 'dark' | 'light' | 'system'
+const getSystemTheme = () =>
+  window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+const themes = {
+  dark: {
+    bg: 'bg-slate-950',
+    bgCard: 'bg-slate-900/60',
+    bgCardSolid: 'bg-slate-900',
+    bgInner: 'bg-slate-950/40',
+    bgBtn: 'bg-slate-800/50',
+    bgBtnSolid: 'bg-slate-800',
+    bgBtnHover: 'hover:bg-slate-700',
+    bgTab: 'bg-slate-900/80',
+    bgModal: 'bg-slate-900',
+    bgRadius: 'bg-slate-900/60',
+    bgRadiusActive: 'bg-slate-600',
+    border: 'border-slate-800',
+    borderCard: 'border-slate-800/80',
+    borderInner: 'border-white/5',
+    borderBtn: 'border-slate-700/50',
+    text: 'text-slate-100',
+    textSub: 'text-slate-500',
+    textMuted: 'text-slate-400',
+    textBtn: 'text-slate-300',
+    glow1: 'bg-indigo-600/20',
+    glow2: 'bg-purple-600/10',
+    modalOverlay: 'bg-slate-950/80',
+    divider: 'border-slate-800/60',
+    skeletonBase: 'bg-slate-900/40',
+    skeletonItem: 'bg-slate-800',
+    skeletonInner: 'bg-slate-800/50',
+  },
+  light: {
+    bg: 'bg-slate-100',
+    bgCard: 'bg-white/80',
+    bgCardSolid: 'bg-white',
+    bgInner: 'bg-slate-100/80',
+    bgBtn: 'bg-white/70',
+    bgBtnSolid: 'bg-white',
+    bgBtnHover: 'hover:bg-slate-200',
+    bgTab: 'bg-white/90',
+    bgModal: 'bg-white',
+    bgRadius: 'bg-white/80',
+    bgRadiusActive: 'bg-slate-300',
+    border: 'border-slate-200',
+    borderCard: 'border-slate-200/80',
+    borderInner: 'border-slate-200',
+    borderBtn: 'border-slate-300',
+    text: 'text-slate-900',
+    textSub: 'text-slate-400',
+    textMuted: 'text-slate-500',
+    textBtn: 'text-slate-600',
+    glow1: 'bg-indigo-300/20',
+    glow2: 'bg-purple-300/10',
+    modalOverlay: 'bg-slate-900/50',
+    divider: 'border-slate-200',
+    skeletonBase: 'bg-slate-200/60',
+    skeletonItem: 'bg-slate-200',
+    skeletonInner: 'bg-slate-200/70',
+  },
+};
 
 // --- 地理位置工具函式 ---
 
@@ -109,6 +176,7 @@ const App = () => {
   const [locationError, setLocationError] = useState('');
   const [activeTab, setActiveTab] = useState('full');
   const [lastUpdated, setLastUpdated] = useState('');
+  const [radius, setRadius] = useState(1); // 公里，預設 1km
   
   // Modal 狀態
   const [aiInsight, setAiInsight] = useState(null);
@@ -191,7 +259,7 @@ const App = () => {
     // act 欄位可能是數字 1 或字串 "1"，用 == 寬鬆比較
     // 有定位時只顯示方圓 1 公里內的站點
     const nearby = userLocation
-      ? list.filter(s => s.dist <= 1 && s.act == 1)
+      ? list.filter(s => s.dist <= radius && s.act == 1)
       : list.filter(s => s.act == 1);
 
     let filtered;
@@ -214,7 +282,7 @@ const App = () => {
       setIsFallbackMode(false);
       return filtered;
     }
-  }, [stations, activeTab, userLocation]);
+  }, [stations, activeTab, userLocation, radius]);
 
   // 3. Gemini API 分析
   const analyzeMissions = async () => {
@@ -416,7 +484,34 @@ const App = () => {
           </button>
         </div>
 
-        {/* 提示訊息 */}
+        {/* 距離範圍選擇器（只有開啟定位才顯示） */}
+        <AnimatePresence>
+          {userLocation && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex items-center space-x-2 mb-4"
+            >
+              <span className="text-[11px] text-slate-500 whitespace-nowrap">篩選範圍</span>
+              <div className="flex flex-1 bg-slate-900/60 border border-slate-800 rounded-xl p-1 space-x-1">
+                {[1, 1.5, 2].map(r => (
+                  <button
+                    key={r}
+                    onClick={() => setRadius(r)}
+                    className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all duration-200 ${
+                      radius === r
+                        ? 'bg-slate-600 text-white shadow'
+                        : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    {r} km
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <AnimatePresence>
           {isFallbackMode && !loading && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-4 px-4 py-2 bg-slate-900/40 border border-slate-800 rounded-xl flex items-center space-x-2 text-slate-400">
